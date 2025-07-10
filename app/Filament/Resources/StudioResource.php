@@ -15,6 +15,11 @@ class StudioResource extends Resource
 {
     protected static ?string $model = Studio::class;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->user()->hasRole('ADMIN');
+    }
+
     protected static ?string $navigationIcon = 'heroicon-o-building-office';
 
     protected static ?string $navigationGroup = 'Content Management';

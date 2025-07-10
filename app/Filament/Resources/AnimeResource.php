@@ -13,6 +13,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
+use Filament\Facades\Filament;
 
 class AnimeResource extends Resource
 {
@@ -21,6 +22,26 @@ class AnimeResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-film';
 
     protected static ?string $navigationGroup = 'Content Management';
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->can('view_anime');
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->can('create_anime');
+    }
+
+    public static function canEdit($record): bool
+    {
+        return auth()->user()->can('edit_anime');
+    }
+
+    public static function canDelete($record): bool
+    {
+        return auth()->user()->can('delete_anime');
+    }
 
     public static function form(Form $form): Form
     {
@@ -168,10 +189,13 @@ class AnimeResource extends Resource
                 Forms\Components\Section::make('Publishing')
                     ->schema([
                         Forms\Components\Toggle::make('is_featured')
-                            ->label('Featured Anime'),
+                            ->label('Featured Anime')
+                            ->visible(fn () => auth()->user()->can('publish_anime')),
 
                         Forms\Components\Toggle::make('is_published')
-                            ->label('Published'),
+                            ->label('Published')
+                            ->visible(fn () => auth()->user()->can('publish_anime'))
+                            ->helperText(fn () => auth()->user()->hasRole('EDITOR') ? 'Only admins can publish content' : null),
                     ])->columns(2),
             ]);
     }
@@ -251,11 +275,13 @@ class AnimeResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn () => auth()->user()->can('delete_anime')),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->visible(fn () => auth()->user()->can('delete_anime')),
                 ]),
             ]);
     }

@@ -16,6 +16,11 @@ class EpisodeResource extends Resource
 {
     protected static ?string $model = Episode::class;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->user()->hasRole('ADMIN');
+    }
+
     protected static ?string $navigationIcon = 'heroicon-o-play';
 
     protected static ?string $navigationGroup = 'Content Management';

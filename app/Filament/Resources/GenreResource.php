@@ -15,6 +15,11 @@ class GenreResource extends Resource
 {
     protected static ?string $model = Genre::class;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->user()->hasRole('ADMIN');
+    }
+
     protected static ?string $navigationIcon = 'heroicon-o-tag';
 
     protected static ?string $navigationGroup = 'Content Management';

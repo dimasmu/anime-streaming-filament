@@ -15,6 +15,11 @@ class CategoryResource extends Resource
 {
     protected static ?string $model = Category::class;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->user()->hasRole('ADMIN');
+    }
+
     protected static ?string $navigationIcon = 'heroicon-o-folder';
 
     protected static ?string $navigationGroup = 'Content Management';
