@@ -31,12 +31,19 @@ class AnimeResource extends Resource
                         Forms\Components\TextInput::make('title')
                             ->required()
                             ->live(onBlur: true)
-                            ->afterStateUpdated(fn (string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
-                        
+                            ->afterStateUpdated(function (string $context, $state, callable $set, callable $get) {
+                                if ($context === 'create' || empty($get('slug'))) {
+                                    $set('slug', Str::slug($state));
+                                }
+                            }),
+
                         Forms\Components\TextInput::make('slug')
                             ->required()
-                            ->unique(ignoreRecord: true),
-                        
+                            ->disabled()
+                            ->dehydrated()
+                            ->unique(ignoreRecord: true)
+                            ->helperText('Auto-generated from title'),
+
                         Forms\Components\Select::make('status')
                             ->options([
                                 'upcoming' => 'Upcoming',
@@ -45,7 +52,7 @@ class AnimeResource extends Resource
                                 'hiatus' => 'Hiatus',
                             ])
                             ->required(),
-                        
+
                         Forms\Components\Select::make('type')
                             ->options([
                                 'tv' => 'TV Series',
@@ -61,7 +68,7 @@ class AnimeResource extends Resource
                     ->schema([
                         Forms\Components\Textarea::make('description')
                             ->rows(3),
-                        
+
                         Forms\Components\RichEditor::make('synopsis')
                             ->columnSpanFull(),
                     ]),
@@ -70,12 +77,16 @@ class AnimeResource extends Resource
                     ->schema([
                         Forms\Components\FileUpload::make('poster_image')
                             ->image()
-                            ->directory('anime/posters'),
-                        
+                            ->disk('public')
+                            ->directory('anime/posters')
+                            ->visibility('public'),
+
                         Forms\Components\FileUpload::make('cover_image')
                             ->image()
-                            ->directory('anime/covers'),
-                        
+                            ->disk('public')
+                            ->directory('anime/covers')
+                            ->visibility('public'),
+
                         Forms\Components\TextInput::make('trailer_url')
                             ->url(),
                     ])->columns(3),
@@ -85,19 +96,19 @@ class AnimeResource extends Resource
                         Forms\Components\TextInput::make('episodes_count')
                             ->numeric()
                             ->minValue(1),
-                        
+
                         Forms\Components\TextInput::make('duration')
                             ->numeric()
                             ->suffix('minutes'),
-                        
+
                         Forms\Components\DatePicker::make('release_date'),
-                        
+
                         Forms\Components\TextInput::make('rating')
                             ->numeric()
                             ->minValue(0)
                             ->maxValue(10)
                             ->step(0.1),
-                        
+
                         Forms\Components\Select::make('studio_id')
                             ->relationship('studio', 'name')
                             ->searchable()
@@ -117,7 +128,7 @@ class AnimeResource extends Resource
                                     ->default(true),
                             ])
                             ->label('Studio'),
-                        
+
                         Forms\Components\TextInput::make('source')
                             ->placeholder('e.g., Manga, Light Novel, Original'),
                     ])->columns(3),
@@ -137,7 +148,7 @@ class AnimeResource extends Resource
                                     ->required(),
                                 Forms\Components\ColorPicker::make('color'),
                             ]),
-                        
+
                         Forms\Components\Select::make('categories')
                             ->relationship('categories', 'name')
                             ->multiple()
@@ -158,7 +169,7 @@ class AnimeResource extends Resource
                     ->schema([
                         Forms\Components\Toggle::make('is_featured')
                             ->label('Featured Anime'),
-                        
+
                         Forms\Components\Toggle::make('is_published')
                             ->label('Published'),
                     ])->columns(2),
@@ -170,12 +181,13 @@ class AnimeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('poster_image')
+                    ->disk('public')
                     ->size(60),
-                
+
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->sortable(),
-                
+
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
                         'warning' => 'upcoming',
@@ -183,29 +195,29 @@ class AnimeResource extends Resource
                         'primary' => 'completed',
                         'danger' => 'hiatus',
                     ]),
-                
+
                 Tables\Columns\TextColumn::make('type')
                     ->badge(),
-                
+
                 Tables\Columns\TextColumn::make('episodes_count')
                     ->label('Episodes')
                     ->sortable(),
-                
+
                 Tables\Columns\TextColumn::make('studio.name')
                     ->label('Studio')
                     ->sortable(),
-                
+
                 Tables\Columns\TextColumn::make('rating')
                     ->sortable(),
-                
+
                 Tables\Columns\IconColumn::make('is_featured')
                     ->boolean()
                     ->label('Featured'),
-                
+
                 Tables\Columns\IconColumn::make('is_published')
                     ->boolean()
                     ->label('Published'),
-                
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -219,7 +231,7 @@ class AnimeResource extends Resource
                         'completed' => 'Completed',
                         'hiatus' => 'Hiatus',
                     ]),
-                
+
                 Tables\Filters\SelectFilter::make('type')
                     ->options([
                         'tv' => 'TV Series',
@@ -228,12 +240,12 @@ class AnimeResource extends Resource
                         'ona' => 'ONA',
                         'special' => 'Special',
                     ]),
-                
+
                 Tables\Filters\SelectFilter::make('studio')
                     ->relationship('studio', 'name')
                     ->searchable()
                     ->preload(),
-                
+
                 Tables\Filters\TernaryFilter::make('is_featured'),
                 Tables\Filters\TernaryFilter::make('is_published'),
             ])
