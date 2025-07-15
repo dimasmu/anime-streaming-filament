@@ -16,14 +16,41 @@ class EpisodeResource extends Resource
 {
     protected static ?string $model = Episode::class;
 
-    public static function shouldRegisterNavigation(): bool
+    // public static function shouldRegisterNavigation(): bool
+    // {
+    //     return auth()->user()->hasRole('ADMIN');
+    // }
+
+      public static function canViewAny(): bool
     {
-        return auth()->user()->hasRole('ADMIN');
+        return auth()->user()->can('view_episode');
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->can('create_episode');
+    }
+
+    public static function canEdit($record): bool
+    {
+        return auth()->user()->can('edit_episode');
+    }
+
+    public static function canDelete($record): bool
+    {
+        return auth()->user()->can('delete_episode');
     }
 
     protected static ?string $navigationIcon = 'heroicon-o-play';
 
     protected static ?string $navigationGroup = 'Content Management';
+
+    // PERFORMANCE FIX: Add eager loading to prevent N+1 queries
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['anime']); // Eager load anime relationship
+    }
 
     public static function form(Form $form): Form
     {
@@ -31,20 +58,20 @@ class EpisodeResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Episode Information')
                     ->schema([
+                        // PERFORMANCE FIX: Remove preload() for better performance
                         Forms\Components\Select::make('anime_id')
                             ->relationship('anime', 'title')
                             ->searchable()
-                            ->preload()
                             ->required(),
-                        
+
                         Forms\Components\TextInput::make('title')
                             ->required(),
-                        
+
                         Forms\Components\TextInput::make('episode_number')
                             ->numeric()
                             ->required()
                             ->minValue(1),
-                        
+
                         Forms\Components\DatePicker::make('air_date'),
                     ])->columns(2),
 
@@ -60,11 +87,11 @@ class EpisodeResource extends Resource
                         Forms\Components\FileUpload::make('thumbnail')
                             ->image()
                             ->directory('episodes/thumbnails'),
-                        
+
                         Forms\Components\TextInput::make('video_url')
                             ->url()
                             ->placeholder('https://example.com/video.mp4'),
-                        
+
                         Forms\Components\TextInput::make('duration')
                             ->numeric()
                             ->suffix('minutes'),
@@ -73,53 +100,58 @@ class EpisodeResource extends Resource
                 Forms\Components\Section::make('Publishing')
                     ->schema([
                         Forms\Components\Toggle::make('is_published')
-                            ->label('Published'),
-                    ]),
+                            ->label('Published')->visible(fn () => auth()->user()->can('publish_episode'))
+                            ->helperText(fn () => auth()->user()->hasRole('EDITOR') ? 'Only admins can publish content' : null),
+                    ])->visible(fn () => auth()->user()->can('publish_episode')),
             ]);
     }
 
     public static function table(Table $table): Table
     {
+        // Cache user permissions to avoid repeated checks
+        $canPublish = auth()->user()->can('publish_episode');
+        $canDelete = auth()->user()->can('delete_episode');
+
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('thumbnail')
                     ->size(60),
-                
+
                 Tables\Columns\TextColumn::make('anime.title')
                     ->searchable()
                     ->sortable(),
-                
+
                 Tables\Columns\TextColumn::make('episode_number')
                     ->label('Episode #')
                     ->sortable(),
-                
+
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->limit(30),
-                
+
                 Tables\Columns\TextColumn::make('duration')
                     ->suffix(' min')
                     ->sortable(),
-                
+
                 Tables\Columns\TextColumn::make('air_date')
                     ->date()
                     ->sortable(),
-                
+
                 Tables\Columns\IconColumn::make('is_published')
                     ->boolean()
                     ->label('Published'),
-                
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                // PERFORMANCE FIX: Remove preload() from filters
                 Tables\Filters\SelectFilter::make('anime')
                     ->relationship('anime', 'title')
-                    ->searchable()
-                    ->preload(),
-                
+                    ->searchable(),
+
                 Tables\Filters\TernaryFilter::make('is_published'),
             ])
             ->actions([

@@ -34,7 +34,7 @@ return [
     'section.permissions' => 'Permissions',
     'section.role' => 'Role',
     'section.roles' => 'Roles',
-    'section.roles_and_permissions' => 'Roles and Permissions',
+    'section.roles_and_permissions' => 'Users Management',
     'select-team' => 'Select a Team',
     'select-team-hint' => 'Leave blank for a global role',
     'section.users' => 'Users',

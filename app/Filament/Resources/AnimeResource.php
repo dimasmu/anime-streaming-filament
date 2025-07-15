@@ -23,6 +23,17 @@ class AnimeResource extends Resource
 
     protected static ?string $navigationGroup = 'Content Management';
 
+    // Add pagination for better performance
+    protected static ?int $recordsPerPage = 25;
+
+    // PERFORMANCE FIX: Add eager loading to prevent N+1 queries
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['studio', 'genres', 'categories']) // Eager load relationships
+            ->withCount('episodes'); // Add episode count efficiently
+    }
+
     public static function canViewAny(): bool
     {
         return auth()->user()->can('view_anime');
@@ -130,11 +141,11 @@ class AnimeResource extends Resource
                             ->maxValue(10)
                             ->step(0.1),
 
+                        // PERMISSION FIX: Only ADMIN can create new studios
                         Forms\Components\Select::make('studio_id')
                             ->relationship('studio', 'name')
                             ->searchable()
-                            ->preload()
-                            ->createOptionForm([
+                            ->createOptionForm(auth()->user()->can('create_studio') ? [
                                 Forms\Components\TextInput::make('name')
                                     ->required()
                                     ->live(onBlur: true)
@@ -147,8 +158,9 @@ class AnimeResource extends Resource
                                     ->numeric(),
                                 Forms\Components\Toggle::make('is_active')
                                     ->default(true),
-                            ])
-                            ->label('Studio'),
+                            ] : null)
+                            ->label('Studio')
+                            ->helperText(auth()->user()->hasRole('EDITOR') ? 'Contact admin to add new studios' : null),
 
                         Forms\Components\TextInput::make('source')
                             ->placeholder('e.g., Manga, Light Novel, Original'),
@@ -156,11 +168,12 @@ class AnimeResource extends Resource
 
                 Forms\Components\Section::make('Categories & Genres')
                     ->schema([
+                        // PERMISSION FIX: Only ADMIN can create new genres
                         Forms\Components\Select::make('genres')
                             ->relationship('genres', 'name')
                             ->multiple()
-                            ->preload()
-                            ->createOptionForm([
+                            ->searchable()
+                            ->createOptionForm(auth()->user()->can('create_genre') ? [
                                 Forms\Components\TextInput::make('name')
                                     ->required()
                                     ->live(onBlur: true)
@@ -168,13 +181,15 @@ class AnimeResource extends Resource
                                 Forms\Components\TextInput::make('slug')
                                     ->required(),
                                 Forms\Components\ColorPicker::make('color'),
-                            ]),
+                            ] : null)
+                            ->helperText(auth()->user()->hasRole('EDITOR') ? 'Contact admin to add new genres' : null),
 
+                        // PERMISSION FIX: Only ADMIN can create new categories
                         Forms\Components\Select::make('categories')
                             ->relationship('categories', 'name')
                             ->multiple()
-                            ->preload()
-                            ->createOptionForm([
+                            ->searchable()
+                            ->createOptionForm(auth()->user()->can('create_category') ? [
                                 Forms\Components\TextInput::make('name')
                                     ->required()
                                     ->live(onBlur: true)
@@ -183,7 +198,8 @@ class AnimeResource extends Resource
                                     ->required(),
                                 Forms\Components\TextInput::make('icon')
                                     ->placeholder('heroicon name'),
-                            ]),
+                            ] : null)
+                            ->helperText(auth()->user()->hasRole('EDITOR') ? 'Contact admin to add new categories' : null),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Publishing')
@@ -202,6 +218,10 @@ class AnimeResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // Cache user permissions to avoid repeated checks
+        $canPublish = auth()->user()->can('publish_anime');
+        $canDelete = auth()->user()->can('delete_anime');
+
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('poster_image')
@@ -210,7 +230,8 @@ class AnimeResource extends Resource
 
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->limit(30), // Add limit for better performance
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
@@ -234,13 +255,14 @@ class AnimeResource extends Resource
                 Tables\Columns\TextColumn::make('rating')
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('is_featured')
-                    ->boolean()
-                    ->label('Featured'),
+                // PERFORMANCE FIX: Cache permission check
+                Tables\Columns\ToggleColumn::make('is_featured')
+                    ->label('Featured')
+                    ->visible($canPublish),
 
-                Tables\Columns\IconColumn::make('is_published')
-                    ->boolean()
-                    ->label('Published'),
+                Tables\Columns\ToggleColumn::make('is_published')
+                    ->label('Published')
+                    ->visible($canPublish),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -265,10 +287,10 @@ class AnimeResource extends Resource
                         'special' => 'Special',
                     ]),
 
+                // PERFORMANCE FIX: Remove preload() from filters
                 Tables\Filters\SelectFilter::make('studio')
                     ->relationship('studio', 'name')
-                    ->searchable()
-                    ->preload(),
+                    ->searchable(),
 
                 Tables\Filters\TernaryFilter::make('is_featured'),
                 Tables\Filters\TernaryFilter::make('is_published'),
@@ -276,12 +298,12 @@ class AnimeResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
-                    ->visible(fn () => auth()->user()->can('delete_anime')),
+                    ->visible($canDelete), // Use cached permission
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                        ->visible(fn () => auth()->user()->can('delete_anime')),
+                        ->visible($canDelete), // Use cached permission
                 ]),
             ]);
     }
