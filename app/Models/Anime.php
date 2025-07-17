@@ -22,6 +22,7 @@ class Anime extends Model
         'poster_image',
         'cover_image',
         'trailer_url',
+        'video_upload_type_id',
         'status',
         'type',
         'episodes_count',
@@ -59,5 +60,42 @@ class Anime extends Model
     public function studio(): BelongsTo
     {
         return $this->belongsTo(Studio::class);
+    }
+
+    public function videoUploadType(): BelongsTo
+    {
+        return $this->belongsTo(VideoUploadType::class);
+    }
+
+    /**
+     * Get the actual count of uploaded episodes
+     */
+    public function getActualEpisodesCountAttribute()
+    {
+        return $this->episodes()->count();
+    }
+
+    /**
+     * Check if all planned episodes are uploaded
+     */
+    public function getIsCompleteAttribute()
+    {
+        return $this->episodes_count && $this->actual_episodes_count >= $this->episodes_count;
+    }
+
+    /**
+     * Get the full URL for poster image
+     */
+    public function getPosterImageUrlAttribute()
+    {
+        return $this->poster_image ? asset('storage/' . $this->poster_image) : null;
+    }
+
+    /**
+     * Get the full URL for cover image
+     */
+    public function getCoverImageUrlAttribute()
+    {
+        return $this->cover_image ? asset('storage/' . $this->cover_image) : null;
     }
 }

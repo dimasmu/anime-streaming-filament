@@ -4,20 +4,15 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
-use Filament\Forms;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Form;
+use Filament\Forms\Components\{Section, TextInput, Select};
 use Filament\Resources\Resource;
-use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\{TextColumn, BadgeColumn, TextInputColumn, ToggleColumn};
+use Filament\Tables\Actions\{EditAction, DeleteAction, BulkActionGroup, DeleteBulkAction};
+use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\BadgeColumn;
-use Filament\Tables\Columns\TextInputColumn;
-use Filament\Tables\Columns\ToggleColumn;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Password;
-use Filament\Forms\Components\Select;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Auth;
 
@@ -28,7 +23,7 @@ class UserResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-user';
 
     protected static ?string $navigationGroup = 'Users Management';
-    
+
     protected static ?int $navigationSort = 1;
 
     public static function shouldRegisterNavigation(): bool
@@ -91,13 +86,13 @@ class UserResource extends Resource
 
                         TextInput::make('password')
                             ->password()
-                            ->required(fn (string $context) => $context === 'create')
+                            ->required(fn(string $context) => $context === 'create')
                             ->minLength(8)
                             ->maxLength(255)
-                            ->dehydrateStateUsing(fn ($state) => $state ? bcrypt($state) : null)
-                            ->dehydrated(fn ($state) => filled($state))
-                            ->placeholder(fn (string $context) => $context === 'create' ? 'Enter password' : 'Leave blank to keep current password')
-                            ->helperText(fn (string $context) => $context === 'edit' ? 'Leave blank to keep the current password' : 'Minimum 8 characters')
+                            ->dehydrateStateUsing(fn($state) => $state ? bcrypt($state) : null)
+                            ->dehydrated(fn($state) => filled($state))
+                            ->placeholder(fn(string $context) => $context === 'create' ? 'Enter password' : 'Leave blank to keep current password')
+                            ->helperText(fn(string $context) => $context === 'edit' ? 'Leave blank to keep the current password' : 'Minimum 8 characters')
                             ->autocomplete('new-password'),
 
                         Select::make('roles')
@@ -116,7 +111,7 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->recordClasses(fn ($record) => match (true) {
+            ->recordClasses(fn($record) => match (true) {
                 $record->hasRole('ADMIN') => 'bg-red-50 border-l-4 border-red-500', // Red background for restricted ADMIN
                 $record->hasRole('EDITOR') => 'bg-green-50 border-l-4 border-green-500', // Green background for EDITOR with permissions
                 $record->hasRole('USER_MANAGER') => 'bg-blue-50 border-l-4 border-blue-500', // Blue background for USER_MANAGER
@@ -134,7 +129,7 @@ class UserResource extends Resource
                 TextColumn::make('roles.name')
                     ->label('Roles')
                     ->badge()
-                    ->color(fn ($record) => match (true) {
+                    ->color(fn($record) => match (true) {
                         $record->hasRole('ADMIN') => 'danger', // Red for ADMIN (restricted from user management)
                         $record->hasRole('EDITOR') => 'warning', // Orange for EDITOR (limited permissions)
                         $record->hasRole('USER_MANAGER') => 'success', // Green for USER_MANAGER (can manage users)
@@ -154,35 +149,35 @@ class UserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('roles')
+                SelectFilter::make('roles')
                     ->relationship('roles', 'name')
                     ->multiple()
                     ->preload(),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make()
+                ViewAction::make()
                     ->modalHeading('View User Details')
                     ->modalWidth('lg'),
 
-                Tables\Actions\EditAction::make()
+                EditAction::make()
                     ->modalHeading('Edit User')
                     ->modalButton('Save Changes')
                     ->modalWidth('lg')
                     ->successNotificationTitle('User updated successfully')
-                    ->disabled(fn ($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN'))
-                    ->tooltip(fn ($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN') ? 'ADMIN users cannot edit other ADMIN users' : null),
+                    ->disabled(fn($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN'))
+                    ->tooltip(fn($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN') ? 'ADMIN users cannot edit other ADMIN users' : null),
 
-                Tables\Actions\DeleteAction::make()
+                DeleteAction::make()
                     ->modalHeading('Delete User')
                     ->modalDescription('Are you sure you want to delete this user? This action cannot be undone.')
                     ->modalSubmitActionLabel('Yes, delete it')
                     ->successNotificationTitle('User deleted successfully')
-                    ->disabled(fn ($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN'))
-                    ->tooltip(fn ($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN') ? 'ADMIN users cannot delete other ADMIN users' : null),
+                    ->disabled(fn($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN'))
+                    ->tooltip(fn($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN') ? 'ADMIN users cannot delete other ADMIN users' : null),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
                         ->modalHeading('Delete Selected Users')
                         ->modalDescription('Are you sure you want to delete the selected users? This action cannot be undone.')
                         ->modalSubmitActionLabel('Yes, delete them')
@@ -192,7 +187,7 @@ class UserResource extends Resource
             ->emptyStateHeading('No users found')
             ->emptyStateDescription('Get started by creating your first user.')
             ->emptyStateActions([
-                Tables\Actions\CreateAction::make()
+                CreateAction::make()
                     ->modalHeading('Create New User')
                     ->modalButton('Create User')
                     ->modalWidth('lg')

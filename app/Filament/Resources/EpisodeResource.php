@@ -6,11 +6,13 @@ use App\Filament\Resources\EpisodeResource\Pages;
 use App\Models\Episode;
 use App\Models\Anime;
 use App\Models\VideoUploadType;
-use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Components\{Section, TextInput, Select, Textarea, FileUpload, DatePicker, Toggle};
 use Filament\Resources\Resource;
-use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\{TextColumn, ImageColumn, BadgeColumn, ToggleColumn};
+use Filament\Tables\Filters\{SelectFilter, TernaryFilter};
+use Filament\Tables\Actions\{EditAction, DeleteAction, BulkActionGroup, DeleteBulkAction};
 use Illuminate\Database\Eloquent\Builder;
 
 class EpisodeResource extends Resource
@@ -22,7 +24,7 @@ class EpisodeResource extends Resource
     //     return auth()->user()->hasRole('ADMIN');
     // }
 
-      public static function canViewAny(): bool
+    public static function canViewAny(): bool
     {
         return auth()->user()->can('view_episode');
     }
@@ -57,70 +59,87 @@ class EpisodeResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Episode Information')
+                Section::make('Episode Information')
                     ->schema([
                         // PERFORMANCE FIX: Remove preload() for better performance
-                        Forms\Components\Select::make('anime_id')
+                        Select::make('anime_id')
                             ->relationship('anime', 'title')
                             ->searchable()
+                            ->preload()
                             ->required(),
 
-                        Forms\Components\TextInput::make('title')
+                        TextInput::make('title')
                             ->required(),
 
-                        Forms\Components\TextInput::make('episode_number')
+                        TextInput::make('episode_number')
                             ->numeric()
                             ->required()
                             ->minValue(1),
 
-                        Forms\Components\DatePicker::make('air_date'),
+                        DatePicker::make('air_date'),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Content')
+                Section::make('Content')
                     ->schema([
-                        Forms\Components\Textarea::make('description')
+                        Textarea::make('description')
                             ->rows(4)
                             ->columnSpanFull(),
                     ]),
 
-                Forms\Components\Section::make('Media')
+                Section::make('Media')
                     ->schema([
-                        Forms\Components\FileUpload::make('thumbnail')
+                        FileUpload::make('thumbnail')
                             ->image()
                             ->directory('episodes/thumbnails'),
 
-                        Forms\Components\TextInput::make('video_url')
+                        TextInput::make('video_url')
                             ->url()
                             ->placeholder('https://example.com/video.mp4'),
 
-                        Forms\Components\Select::make('video_upload_type_id')
+                        Select::make('video_upload_type_id')
                             ->label('Video Upload Type')
                             ->relationship('videoUploadType', 'name')
+                            ->options(VideoUploadType::active()->pluck('name', 'id'))
                             ->searchable()
                             ->preload()
-                            ->placeholder('Select upload type'),
+                            ->nullable()
+                            ->placeholder('Select upload type')
+                            ->createOptionForm(auth()->user()->can('create_video_upload_type') ? [
+                                TextInput::make('name')
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->placeholder('e.g., YouTube, Vimeo, Direct Upload'),
+                                Textarea::make('description')
+                                    ->placeholder('Optional description of this upload type')
+                                    ->rows(3),
+                                Toggle::make('is_active')
+                                    ->label('Active')
+                                    ->default(true)
+                                    ->helperText('Only active upload types will be available for selection'),
+                            ] : null)
+                            ->helperText(auth()->user()->can('create_video_upload_type') ? null : 'Contact admin to add new video upload types'),
 
-                        Forms\Components\TextInput::make('duration')
+                        TextInput::make('duration')
                             ->numeric()
                             ->suffix('minutes'),
                     ])->columns(3),
 
-                Forms\Components\Section::make('Publishing')
+                Section::make('Publishing')
                     ->schema([
-                        Forms\Components\Toggle::make('is_published')
-                            ->label('Published')->visible(fn () => auth()->user()->can('publish_episode'))
-                            ->helperText(fn () => auth()->user()->hasRole('EDITOR') ? 'Only admins can publish content' : null),
-                    ])->visible(fn () => auth()->user()->can('publish_episode')),
+                        Toggle::make('is_published')
+                            ->label('Published')->visible(fn() => auth()->user()->can('publish_episode'))
+                            ->helperText(fn() => auth()->user()->hasRole('EDITOR') ? 'Only admins can publish content' : null),
+                    ])->visible(fn() => auth()->user()->can('publish_episode')),
 
-                Forms\Components\Section::make('Statistics')
+                Section::make('Statistics')
                     ->schema([
-                        Forms\Components\TextInput::make('likes')
+                        TextInput::make('likes')
                             ->numeric()
                             ->disabled()
                             ->default(0)
                             ->helperText('Number of likes (read-only)'),
 
-                        Forms\Components\TextInput::make('views')
+                        TextInput::make('views')
                             ->numeric()
                             ->disabled()
                             ->default(0)
@@ -137,75 +156,82 @@ class EpisodeResource extends Resource
 
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('thumbnail')
+                ImageColumn::make('thumbnail')
+                    ->square()
+                    ->label('Cover')
+                    ->defaultImageUrl(function () {
+                        return asset('images/no-images.png');
+                    })
+                    ->extraImgAttributes(['alt' => 'Cover'])
+                    ->checkFileExistence(false)
                     ->size(60),
 
-                Tables\Columns\TextColumn::make('anime.title')
+                TextColumn::make('anime.title')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('episode_number')
+                TextColumn::make('episode_number')
                     ->label('Episode #')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('title')
+                TextColumn::make('title')
                     ->searchable()
                     ->limit(30),
 
-                Tables\Columns\TextColumn::make('videoUploadType.name')
+                TextColumn::make('videoUploadType.name')
                     ->label('Upload Type')
                     ->badge()
                     ->color('warning')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('duration')
+                TextColumn::make('duration')
                     ->suffix(' min')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('air_date')
+                TextColumn::make('air_date')
                     ->date()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('likes')
+                TextColumn::make('likes')
                     ->numeric()
                     ->sortable()
                     ->badge()
                     ->color('success'),
 
-                Tables\Columns\TextColumn::make('views')
+                TextColumn::make('views')
                     ->numeric()
                     ->sortable()
                     ->badge()
                     ->color('info'),
 
-                Tables\Columns\ToggleColumn::make('is_published')
+                ToggleColumn::make('is_published')
                     ->label('Published')
                     ->visible($canPublish),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 // PERFORMANCE FIX: Remove preload() from filters
-                Tables\Filters\SelectFilter::make('anime')
+                SelectFilter::make('anime')
                     ->relationship('anime', 'title')
                     ->searchable(),
 
-                Tables\Filters\SelectFilter::make('video_upload_type')
+                SelectFilter::make('video_upload_type')
                     ->relationship('videoUploadType', 'name')
                     ->searchable(),
 
-                Tables\Filters\TernaryFilter::make('is_published'),
+                TernaryFilter::make('is_published'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('anime_id', 'asc')

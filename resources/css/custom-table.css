@@ -1,0 +1,27 @@
+/* Custom table styling for wider title columns */
+.fi-ta-table .fi-ta-cell:nth-child(3) {
+    min-width: 350px !important;
+    width: 350px !important;
+    max-width: 350px !important;
+}
+
+.fi-ta-table .fi-ta-cell:nth-child(3) .fi-ta-text {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    line-height: 1.4 !important;
+}
+
+/* Alternative approach - target by data attribute */
+.fi-ta-table [data-column="title"] {
+    min-width: 350px !important;
+    width: 350px !important;
+}
+
+/* Ensure table doesn't compress the title column */
+.fi-ta-table {
+    table-layout: fixed !important;
+}
+
+.fi-ta-table .fi-ta-cell {
+    vertical-align: top !important;
+}

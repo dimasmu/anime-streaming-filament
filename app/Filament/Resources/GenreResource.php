@@ -4,11 +4,12 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\GenreResource\Pages;
 use App\Models\Genre;
-use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Components\{TextInput, Textarea, ColorPicker};
 use Filament\Resources\Resource;
-use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\{TextColumn, ColorColumn};
+use Filament\Tables\Actions\{EditAction, DeleteAction, BulkActionGroup, DeleteBulkAction};
 use Illuminate\Support\Str;
 
 class GenreResource extends Resource
@@ -28,19 +29,19 @@ class GenreResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')
+                TextInput::make('name')
                     ->required()
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn (string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
                 
-                Forms\Components\TextInput::make('slug')
+                TextInput::make('slug')
                     ->required()
                     ->unique(ignoreRecord: true),
                 
-                Forms\Components\ColorPicker::make('color')
+                ColorPicker::make('color')
                     ->label('Color Theme'),
                 
-                Forms\Components\Textarea::make('description')
+                Textarea::make('description')
                     ->rows(3)
                     ->columnSpanFull(),
             ]);
@@ -50,21 +51,27 @@ class GenreResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ColorColumn::make('color')
-                    ->label('Color'),
+                ColorColumn::make('color')
+                    ->label('Color')
+                    ->size('lg'),
                 
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->weight('medium'),
                 
-                Tables\Columns\TextColumn::make('slug')
-                    ->searchable(),
+                TextColumn::make('slug')
+                    ->searchable()
+                    ->color('gray')
+                    ->size('sm'),
                 
-                Tables\Columns\TextColumn::make('animes_count')
+                TextColumn::make('animes_count')
                     ->counts('animes')
-                    ->label('Animes Count'),
+                    ->label('Animes')
+                    ->badge()
+                    ->color('primary'),
                 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -73,14 +80,16 @@ class GenreResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->striped()
+            ->paginated([10, 25, 50]);
     }
 
     public static function getRelations(): array
