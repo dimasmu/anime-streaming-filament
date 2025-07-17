@@ -32,15 +32,15 @@ class GenreResource extends Resource
                 TextInput::make('name')
                     ->required()
                     ->live(onBlur: true)
-                    ->afterStateUpdated(fn (string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
-                
+                    ->afterStateUpdated(fn(string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
+
                 TextInput::make('slug')
                     ->required()
                     ->unique(ignoreRecord: true),
-                
+
                 ColorPicker::make('color')
                     ->label('Color Theme'),
-                
+
                 Textarea::make('description')
                     ->rows(3)
                     ->columnSpanFull(),
@@ -52,25 +52,24 @@ class GenreResource extends Resource
         return $table
             ->columns([
                 ColorColumn::make('color')
-                    ->label('Color')
-                    ->size('lg'),
-                
+                    ->label('Color'),
+
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable()
                     ->weight('medium'),
-                
+
                 TextColumn::make('slug')
                     ->searchable()
                     ->color('gray')
                     ->size('sm'),
-                
+
                 TextColumn::make('animes_count')
                     ->counts('animes')
                     ->label('Animes')
                     ->badge()
                     ->color('primary'),
-                
+
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
