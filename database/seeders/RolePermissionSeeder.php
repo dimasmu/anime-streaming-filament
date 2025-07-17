@@ -74,6 +74,13 @@ class RolePermissionSeeder extends Seeder
             'activate_studio',
             'deactivate_studio',
             
+            // Video Upload Type Management permissions
+            'view_video_upload_type',
+            'create_video_upload_type',
+            'edit_video_upload_type',
+            'delete_video_upload_type',
+            'bulk_delete_video_upload_type',
+            
             // Dashboard & System permissions
             'view_dashboard',
             'view_analytics',
@@ -123,66 +130,114 @@ class RolePermissionSeeder extends Seeder
             'create_episode',
             'edit_episode',
             
-            // Basic content viewing permissions
+            // Category permissions (view and create only)
+            'view_category',
+            'create_category',
+            'edit_category',
+            
+            // Genre permissions (view and create only)
+            'view_genre',
+            'create_genre',
+            'edit_genre',
+            
+            // Studio permissions (view and create only)
+            'view_studio',
+            'create_studio',
+            'edit_studio',
+            
+            // Video Upload Type permissions (view only)
+            'view_video_upload_type',
+            
+            // Media management
+            'manage_media',
+            'upload_files',
+            'view_file_manager',
+        ];
+        
+        $editorRole->givePermissionTo($editorPermissions);
+
+        // Create VIEWER role with read-only permissions
+        $viewerRole = Role::firstOrCreate(['name' => 'VIEWER']);
+        $viewerPermissions = [
+            'view_dashboard',
+            'view_anime',
+            'view_any_anime',
+            'view_episode',
             'view_category',
             'view_genre',
             'view_studio',
+            'view_video_upload_type',
         ];
-        $editorRole->givePermissionTo($editorPermissions);
+        
+        $viewerRole->givePermissionTo($viewerPermissions);
 
-        // Assign ADMIN role to existing dimasmu user
-        $dimasUser = User::where('email', 'dimasdemond@gmail.com')->first();
-        if ($dimasUser) {
-            $dimasUser->assignRole('ADMIN');
-            echo "Assigned ADMIN role to dimasmu (dimasdemond@gmail.com)\n";
+        // Create MODERATOR role with content management permissions
+        $moderatorRole = Role::firstOrCreate(['name' => 'MODERATOR']);
+        $moderatorPermissions = [
+            // Dashboard access
+            'view_dashboard',
+            'view_analytics',
+            
+            // Full anime management except system-level operations
+            'view_anime',
+            'create_anime',
+            'edit_anime',
+            'delete_anime',
+            'publish_anime',
+            'unpublish_anime',
+            'view_any_anime',
+            
+            // Full episode management
+            'view_episode',
+            'create_episode',
+            'edit_episode',
+            'delete_episode',
+            'publish_episode',
+            'unpublish_episode',
+            
+            // Full category management
+            'view_category',
+            'create_category',
+            'edit_category',
+            'delete_category',
+            
+            // Full genre management
+            'view_genre',
+            'create_genre',
+            'edit_genre',
+            'delete_genre',
+            
+            // Full studio management
+            'view_studio',
+            'create_studio',
+            'edit_studio',
+            'delete_studio',
+            'activate_studio',
+            'deactivate_studio',
+            
+            // Full video upload type management
+            'view_video_upload_type',
+            'create_video_upload_type',
+            'edit_video_upload_type',
+            'delete_video_upload_type',
+            
+            // Media management
+            'manage_media',
+            'upload_files',
+            'delete_files',
+            'view_file_manager',
+        ];
+        
+        $moderatorRole->givePermissionTo($moderatorPermissions);
+
+        // Assign ADMIN role to the seeded user
+        $user = User::where('email', 'dimasdemond@gmail.com')->first();
+        if ($user) {
+            $user->assignRole('ADMIN');
         }
 
-        // Create additional admin user if doesn't exist
-        $adminUser = User::firstOrCreate(
-            ['email' => 'admin@example.com'],
-            [
-                'name' => 'Admin User',
-                'password' => bcrypt('password'),
-            ]
-        );
-        $adminUser->assignRole('ADMIN');
-
-        // Create editor users
-        $editorUsers = [
-            [
-                'name' => 'Sarah Editor',
-                'email' => 'sarah@example.com',
-                'password' => bcrypt('password'),
-            ],
-            [
-                'name' => 'John Editor',
-                'email' => 'john@example.com',
-                'password' => bcrypt('password'),
-            ],
-            [
-                'name' => 'Maria Editor',
-                'email' => 'maria@example.com',
-                'password' => bcrypt('password'),
-            ]
-        ];
-
-        foreach ($editorUsers as $userData) {
-            $editorUser = User::firstOrCreate(
-                ['email' => $userData['email']],
-                $userData
-            );
-            $editorUser->assignRole('EDITOR');
-        }
-
-        echo "\nRoles and Permissions Setup Completed!\n";
-        echo "Created " . count($permissions) . " permissions\n";
-        echo "Created 2 roles: ADMIN and EDITOR\n";
-        echo "\nRole Permissions Summary:\n";
-        echo "ADMIN: Has ALL permissions (including publish/delete)\n";
-        echo "EDITOR: Can view and create animes/episodes only (NO publish/delete permissions)\n";
-        echo "\nUsers Created:\n";
-        echo "ADMIN users: dimasmu (dimasdemond@gmail.com), admin@example.com\n";
-        echo "EDITOR users: sarah@example.com, john@example.com, maria@example.com\n";
-        echo "\nPublishing and deleting animes/episodes is restricted to ADMIN users only.\n";
+        $this->command->info('Roles and permissions have been seeded successfully!');
+        $this->command->info('Created roles: ADMIN, EDITOR, VIEWER, MODERATOR');
+        $this->command->info('User dimasdemond@gmail.com has been assigned ADMIN role');
     }
 }

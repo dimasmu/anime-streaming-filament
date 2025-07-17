@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\EpisodeResource\Pages;
 use App\Models\Episode;
 use App\Models\Anime;
+use App\Models\VideoUploadType;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -49,7 +50,7 @@ class EpisodeResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['anime']); // Eager load anime relationship
+            ->with(['anime', 'videoUploadType']); // Eager load relationships
     }
 
     public static function form(Form $form): Form
@@ -92,6 +93,13 @@ class EpisodeResource extends Resource
                             ->url()
                             ->placeholder('https://example.com/video.mp4'),
 
+                        Forms\Components\Select::make('video_upload_type_id')
+                            ->label('Video Upload Type')
+                            ->relationship('videoUploadType', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('Select upload type'),
+
                         Forms\Components\TextInput::make('duration')
                             ->numeric()
                             ->suffix('minutes'),
@@ -103,6 +111,21 @@ class EpisodeResource extends Resource
                             ->label('Published')->visible(fn () => auth()->user()->can('publish_episode'))
                             ->helperText(fn () => auth()->user()->hasRole('EDITOR') ? 'Only admins can publish content' : null),
                     ])->visible(fn () => auth()->user()->can('publish_episode')),
+
+                Forms\Components\Section::make('Statistics')
+                    ->schema([
+                        Forms\Components\TextInput::make('likes')
+                            ->numeric()
+                            ->disabled()
+                            ->default(0)
+                            ->helperText('Number of likes (read-only)'),
+
+                        Forms\Components\TextInput::make('views')
+                            ->numeric()
+                            ->disabled()
+                            ->default(0)
+                            ->helperText('Number of views (read-only)'),
+                    ])->columns(2),
             ]);
     }
 
@@ -129,6 +152,12 @@ class EpisodeResource extends Resource
                     ->searchable()
                     ->limit(30),
 
+                Tables\Columns\TextColumn::make('videoUploadType.name')
+                    ->label('Upload Type')
+                    ->badge()
+                    ->color('warning')
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('duration')
                     ->suffix(' min')
                     ->sortable(),
@@ -137,9 +166,21 @@ class EpisodeResource extends Resource
                     ->date()
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('is_published')
-                    ->boolean()
-                    ->label('Published'),
+                Tables\Columns\TextColumn::make('likes')
+                    ->numeric()
+                    ->sortable()
+                    ->badge()
+                    ->color('success'),
+
+                Tables\Columns\TextColumn::make('views')
+                    ->numeric()
+                    ->sortable()
+                    ->badge()
+                    ->color('info'),
+
+                Tables\Columns\ToggleColumn::make('is_published')
+                    ->label('Published')
+                    ->visible($canPublish),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -150,6 +191,10 @@ class EpisodeResource extends Resource
                 // PERFORMANCE FIX: Remove preload() from filters
                 Tables\Filters\SelectFilter::make('anime')
                     ->relationship('anime', 'title')
+                    ->searchable(),
+
+                Tables\Filters\SelectFilter::make('video_upload_type')
+                    ->relationship('videoUploadType', 'name')
                     ->searchable(),
 
                 Tables\Filters\TernaryFilter::make('is_published'),

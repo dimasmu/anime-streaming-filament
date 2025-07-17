@@ -44,17 +44,28 @@ class UserResource extends Resource
 
     public static function canCreate(): bool
     {
-        return Auth::user()->hasRole('ADMIN') || Auth::user()->can('create_user');
+        // All users can create users
+        return true;
     }
 
     public static function canEdit($record): bool
     {
-        return Auth::user()->hasRole('ADMIN') || Auth::user()->can('edit_user');
+        // ADMIN users can edit non-ADMIN users only
+        if (Auth::user()->hasRole('ADMIN')) {
+            return !$record->hasRole('ADMIN');
+        }
+        // Other users can edit any user
+        return true;
     }
 
     public static function canDelete($record): bool
     {
-        return Auth::user()->hasRole('ADMIN') || Auth::user()->can('delete_user');
+        // ADMIN users can delete non-ADMIN users only
+        if (Auth::user()->hasRole('ADMIN')) {
+            return !$record->hasRole('ADMIN');
+        }
+        // Other users can delete any user
+        return true;
     }
 
     public static function form(Form $form): Form
@@ -105,6 +116,12 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->recordClasses(fn ($record) => match (true) {
+                $record->hasRole('ADMIN') => 'bg-red-50 border-l-4 border-red-500', // Red background for restricted ADMIN
+                $record->hasRole('EDITOR') => 'bg-green-50 border-l-4 border-green-500', // Green background for EDITOR with permissions
+                $record->hasRole('USER_MANAGER') => 'bg-blue-50 border-l-4 border-blue-500', // Blue background for USER_MANAGER
+                default => 'bg-gray-50 border-l-4 border-gray-300' // Gray for others
+            })
             ->columns([
                 TextColumn::make('name')
                     ->searchable()
@@ -117,6 +134,12 @@ class UserResource extends Resource
                 TextColumn::make('roles.name')
                     ->label('Roles')
                     ->badge()
+                    ->color(fn ($record) => match (true) {
+                        $record->hasRole('ADMIN') => 'danger', // Red for ADMIN (restricted from user management)
+                        $record->hasRole('EDITOR') => 'warning', // Orange for EDITOR (limited permissions)
+                        $record->hasRole('USER_MANAGER') => 'success', // Green for USER_MANAGER (can manage users)
+                        default => 'gray'
+                    })
                     ->sortable()
                     ->toggleable(),
 
@@ -145,13 +168,17 @@ class UserResource extends Resource
                     ->modalHeading('Edit User')
                     ->modalButton('Save Changes')
                     ->modalWidth('lg')
-                    ->successNotificationTitle('User updated successfully'),
+                    ->successNotificationTitle('User updated successfully')
+                    ->disabled(fn ($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN'))
+                    ->tooltip(fn ($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN') ? 'ADMIN users cannot edit other ADMIN users' : null),
 
                 Tables\Actions\DeleteAction::make()
                     ->modalHeading('Delete User')
                     ->modalDescription('Are you sure you want to delete this user? This action cannot be undone.')
                     ->modalSubmitActionLabel('Yes, delete it')
-                    ->successNotificationTitle('User deleted successfully'),
+                    ->successNotificationTitle('User deleted successfully')
+                    ->disabled(fn ($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN'))
+                    ->tooltip(fn ($record) => Auth::user()->hasRole('ADMIN') && $record->hasRole('ADMIN') ? 'ADMIN users cannot delete other ADMIN users' : null),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

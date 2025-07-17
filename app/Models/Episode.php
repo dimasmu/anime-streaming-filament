@@ -19,9 +19,12 @@ class Episode extends Model
         'description',
         'thumbnail',
         'video_url',
+        'video_upload_type_id',
         'duration',
         'air_date',
         'is_published',
+        'likes',
+        'views',
     ];
 
     protected $casts = [
@@ -32,5 +35,10 @@ class Episode extends Model
     public function anime(): BelongsTo
     {
         return $this->belongsTo(Anime::class);
+    }
+
+    public function videoUploadType(): BelongsTo
+    {
+        return $this->belongsTo(VideoUploadType::class);
     }
 }

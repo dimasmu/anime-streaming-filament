@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             StudioSeeder::class,
             GenreSeeder::class,
             CategorySeeder::class,
+            VideoUploadTypeSeeder::class,
         ]);
     }
 }
