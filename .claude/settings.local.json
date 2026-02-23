@@ -5,7 +5,10 @@
       "Bash(find .:*)",
       "Bash(cd D:\\\\streaming movie\\\\anime streaming filament:*)",
       "Bash(php artisan:*)",
-      "Bash(cd \"D:\\\\streaming movie\\\\anime streaming filament\" && php -l \"app/Filament/Resources/AnimeResource.php\" 2>&1)"
+      "Bash(cd \"D:\\\\streaming movie\\\\anime streaming filament\" && php -l \"app/Filament/Resources/AnimeResource.php\" 2>&1)",
+      "Bash(git checkout:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
