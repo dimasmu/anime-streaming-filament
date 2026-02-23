@@ -104,14 +104,16 @@ class StudioSeeder extends Seeder
         ];
 
         foreach ($studios as $studioData) {
-            Studio::create([
-                'name' => $studioData['name'],
-                'slug' => Str::slug($studioData['name']),
-                'description' => $studioData['description'],
-                'website' => $studioData['website'],
-                'founded_year' => $studioData['founded_year'],
-                'is_active' => true,
-            ]);
+            Studio::firstOrCreate(
+                ['slug' => Str::slug($studioData['name'])],
+                [
+                    'name' => $studioData['name'],
+                    'description' => $studioData['description'],
+                    'website' => $studioData['website'],
+                    'founded_year' => $studioData['founded_year'],
+                    'is_active' => true,
+                ]
+            );
         }
     }
 }

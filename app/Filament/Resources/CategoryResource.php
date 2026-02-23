@@ -32,15 +32,15 @@ class CategoryResource extends Resource
                     ->required()
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn (string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
-                
+
                 Forms\Components\TextInput::make('slug')
                     ->required()
                     ->unique(ignoreRecord: true),
-                
+
                 Forms\Components\TextInput::make('icon')
                     ->placeholder('heroicon-o-star')
                     ->helperText('Enter a Heroicon name for the category icon'),
-                
+
                 Forms\Components\Textarea::make('description')
                     ->rows(3)
                     ->columnSpanFull(),
@@ -53,18 +53,18 @@ class CategoryResource extends Resource
             ->columns([
                 Tables\Columns\IconColumn::make('icon')
                     ->icon(fn (string $state): string => $state ?: 'heroicon-o-folder'),
-                
+
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
-                
+
                 Tables\Columns\TextColumn::make('slug')
                     ->searchable(),
-                
+
                 Tables\Columns\TextColumn::make('animes_count')
                     ->counts('animes')
                     ->label('Animes Count'),
-                
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

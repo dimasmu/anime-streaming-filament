@@ -15,18 +15,21 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'dimasmu',
-            'email' => 'dimasdemond@gmail.com',
-            'password' => 'dimas1213'
-        ]);
+        // Create or update the admin user
+        User::firstOrCreate(
+            ['email' => 'dimasdemond@gmail.com'],
+            [
+                'name' => 'dimasmu',
+                'password' => bcrypt('dimas1213'),
+            ]
+        );
 
         $this->call([
             RolePermissionSeeder::class,
+            VideoUploadSourceSeeder::class,
             StudioSeeder::class,
             GenreSeeder::class,
             CategorySeeder::class,
-            VideoUploadTypeSeeder::class,
         ]);
     }
 }

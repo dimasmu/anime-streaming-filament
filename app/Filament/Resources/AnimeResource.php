@@ -4,8 +4,6 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\AnimeResource\Pages;
 use App\Models\Anime;
-use App\Models\Genre;
-use App\Models\Category;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -13,7 +11,6 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
-use Filament\Facades\Filament;
 
 class AnimeResource extends Resource
 {
@@ -69,6 +66,10 @@ class AnimeResource extends Resource
                                 }
                             }),
 
+                        Forms\Components\TextInput::make('japanese_title')
+                            ->label('Japanese Title')
+                            ->helperText('Original Japanese title'),
+
                         Forms\Components\TextInput::make('slug')
                             ->required()
                             ->disabled()
@@ -94,7 +95,7 @@ class AnimeResource extends Resource
                                 'special' => 'Special',
                             ])
                             ->required(),
-                    ])->columns(2),
+                    ])->columns(3),
 
                 Forms\Components\Section::make('Content')
                     ->schema([
@@ -119,27 +120,64 @@ class AnimeResource extends Resource
                             ->directory('anime/covers')
                             ->visibility('public'),
 
+                        Forms\Components\FileUpload::make('banner')
+                            ->image()
+                            ->disk('public')
+                            ->directory('anime/banners')
+                            ->visibility('public')
+                            ->helperText('Banner image for homepage featured sections'),
+
                         Forms\Components\TextInput::make('trailer_url')
                             ->url(),
-                    ])->columns(3),
+                    ])->columns(4),
 
                 Forms\Components\Section::make('Details')
                     ->schema([
                         Forms\Components\TextInput::make('episodes_count')
                             ->numeric()
-                            ->minValue(1),
+                            ->minValue(1)
+                            ->label('Total Episodes'),
+
+                        Forms\Components\TextInput::make('sub_episodes')
+                            ->numeric()
+                            ->minValue(0)
+                            ->label('Sub Episodes')
+                            ->helperText('Number of subbed episodes available'),
+
+                        Forms\Components\TextInput::make('dub_episodes')
+                            ->numeric()
+                            ->minValue(0)
+                            ->label('Dub Episodes')
+                            ->helperText('Number of dubbed episodes available'),
 
                         Forms\Components\TextInput::make('duration')
                             ->numeric()
-                            ->suffix('minutes'),
+                            ->suffix('minutes')
+                            ->label('Episode Duration'),
 
-                        Forms\Components\DatePicker::make('release_date'),
+                        Forms\Components\DatePicker::make('release_date')
+                            ->label('Release Date'),
+
+                        Forms\Components\TextInput::make('release_year')
+                            ->numeric()
+                            ->minValue(1900)
+                            ->maxValue(date('Y') + 5)
+                            ->label('Release Year'),
 
                         Forms\Components\TextInput::make('rating')
                             ->numeric()
                             ->minValue(0)
                             ->maxValue(10)
                             ->step(0.1),
+
+                        Forms\Components\Select::make('quality')
+                            ->options([
+                                'HD' => 'HD (720p)',
+                                'SD' => 'SD (480p)',
+                                '4K' => '4K (2160p)',
+                            ])
+                            ->label('Video Quality')
+                            ->placeholder('Select quality'),
 
                         // PERMISSION FIX: Only ADMIN can create new studios
                         Forms\Components\Select::make('studio_id')
@@ -164,7 +202,7 @@ class AnimeResource extends Resource
 
                         Forms\Components\TextInput::make('source')
                             ->placeholder('e.g., Manga, Light Novel, Original'),
-                    ])->columns(3),
+                    ])->columns(4),
 
                 Forms\Components\Section::make('Categories & Genres')
                     ->schema([
@@ -208,11 +246,16 @@ class AnimeResource extends Resource
                             ->label('Featured Anime')
                             ->visible(fn () => auth()->user()->can('publish_anime')),
 
+                        Forms\Components\Toggle::make('is_adult')
+                            ->label('Adult Content')
+                            ->helperText('Mark as 18+ content')
+                            ->visible(fn () => auth()->user()->can('publish_anime')),
+
                         Forms\Components\Toggle::make('is_published')
                             ->label('Published')
                             ->visible(fn () => auth()->user()->can('publish_anime'))
                             ->helperText(fn () => auth()->user()->hasRole('EDITOR') ? 'Only admins can publish content' : null),
-                    ])->columns(2),
+                    ])->columns(3),
             ]);
     }
 
@@ -231,7 +274,15 @@ class AnimeResource extends Resource
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->sortable()
-                    ->limit(30), // Add limit for better performance
+                    ->limit(30)
+                    ->description(fn (Anime $record): string => $record->japanese_title ?? '')
+                    ->wrap(),
+
+                Tables\Columns\TextColumn::make('japanese_title')
+                    ->label('Japanese Title')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->limit(20),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
@@ -245,8 +296,32 @@ class AnimeResource extends Resource
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('episodes_count')
-                    ->label('Episodes')
-                    ->sortable(),
+                    ->label('Total')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('sub_episodes')
+                    ->label('Sub')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('dub_episodes')
+                    ->label('Dub')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\BadgeColumn::make('quality')
+                    ->colors([
+                        'success' => '4K',
+                        'primary' => 'HD',
+                        'gray' => 'SD',
+                    ])
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('release_year')
+                    ->label('Year')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('studio.name')
                     ->label('Studio')
@@ -254,6 +329,15 @@ class AnimeResource extends Resource
 
                 Tables\Columns\TextColumn::make('rating')
                     ->sortable(),
+
+                Tables\Columns\IconColumn::make('is_adult')
+                    ->label('18+')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-exclamation-triangle')
+                    ->falseIcon('heroicon-o-check-circle')
+                    ->trueColor('danger')
+                    ->falseColor('gray')
+                    ->toggleable(),
 
                 // PERFORMANCE FIX: Cache permission check
                 Tables\Columns\ToggleColumn::make('is_featured')
@@ -287,13 +371,29 @@ class AnimeResource extends Resource
                         'special' => 'Special',
                     ]),
 
-                // PERFORMANCE FIX: Remove preload() from filters
+                Tables\Filters\SelectFilter::make('quality')
+                    ->options([
+                        'HD' => 'HD',
+                        'SD' => 'SD',
+                        '4K' => '4K',
+                    ])
+                    ->placeholder('All Qualities'),
+
                 Tables\Filters\SelectFilter::make('studio')
                     ->relationship('studio', 'name')
                     ->searchable(),
 
-                Tables\Filters\TernaryFilter::make('is_featured'),
-                Tables\Filters\TernaryFilter::make('is_published'),
+                Tables\Filters\TernaryFilter::make('is_featured')
+                    ->label('Featured'),
+
+                Tables\Filters\TernaryFilter::make('is_adult')
+                    ->label('Adult Content')
+                    ->placeholder('All content')
+                    ->trueLabel('Adult only')
+                    ->falseLabel('Non-adult only'),
+
+                Tables\Filters\TernaryFilter::make('is_published')
+                    ->label('Published'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

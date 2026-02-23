@@ -32,12 +32,14 @@ class GenreSeeder extends Seeder
         ];
 
         foreach ($genres as $genreData) {
-            Genre::create([
-                'name' => $genreData['name'],
-                'slug' => Str::slug($genreData['name']),
-                'description' => $genreData['description'],
-                'color' => $genreData['color'],
-            ]);
+            Genre::firstOrCreate(
+                ['slug' => Str::slug($genreData['name'])],
+                [
+                    'name' => $genreData['name'],
+                    'description' => $genreData['description'],
+                    'color' => $genreData['color'],
+                ]
+            );
         }
     }
 }

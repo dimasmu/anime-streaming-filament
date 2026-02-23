@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(find .:*)",
+      "Bash(cd D:\\\\streaming movie\\\\anime streaming filament:*)",
+      "Bash(php artisan:*)",
+      "Bash(cd \"D:\\\\streaming movie\\\\anime streaming filament\" && php -l \"app/Filament/Resources/AnimeResource.php\" 2>&1)"
+    ]
+  }
+}

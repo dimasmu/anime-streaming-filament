@@ -34,15 +34,15 @@ class StudioResource extends Resource
                             ->required()
                             ->live(onBlur: true)
                             ->afterStateUpdated(fn (string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
-                        
+
                         Forms\Components\TextInput::make('slug')
                             ->required()
                             ->unique(ignoreRecord: true),
-                        
+
                         Forms\Components\TextInput::make('website')
                             ->url()
                             ->placeholder('https://studio-website.com'),
-                        
+
                         Forms\Components\TextInput::make('founded_year')
                             ->numeric()
                             ->minValue(1900)
@@ -79,28 +79,28 @@ class StudioResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('logo')
                     ->size(50),
-                
+
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
-                
+
                 Tables\Columns\TextColumn::make('founded_year')
                     ->label('Founded')
                     ->sortable(),
-                
+
                 Tables\Columns\TextColumn::make('website')
                     ->url(fn ($record) => $record->website)
                     ->openUrlInNewTab()
                     ->limit(30),
-                
+
                 Tables\Columns\TextColumn::make('animes_count')
                     ->counts('animes')
                     ->label('Animes Count'),
-                
+
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean()
                     ->label('Active'),
-                
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

@@ -4,8 +4,6 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\EpisodeResource\Pages;
 use App\Models\Episode;
-use App\Models\Anime;
-use App\Models\VideoUploadType;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -22,7 +20,7 @@ class EpisodeResource extends Resource
     //     return auth()->user()->hasRole('ADMIN');
     // }
 
-      public static function canViewAny(): bool
+    public static function canViewAny(): bool
     {
         return auth()->user()->can('view_episode');
     }
@@ -50,7 +48,7 @@ class EpisodeResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['anime', 'videoUploadType']); // Eager load relationships
+            ->with(['anime', 'videoUploadSource']); // Eager load relationships
     }
 
     public static function form(Form $form): Form
@@ -93,17 +91,29 @@ class EpisodeResource extends Resource
                             ->url()
                             ->placeholder('https://example.com/video.mp4'),
 
-                        Forms\Components\Select::make('video_upload_type_id')
-                            ->label('Video Upload Type')
-                            ->relationship('videoUploadType', 'name')
+                        Forms\Components\Select::make('video_upload_source_id')
+                            ->label('Video Upload Source')
+                            ->relationship('videoUploadSource', 'name')
                             ->searchable()
                             ->preload()
-                            ->placeholder('Select upload type'),
+                            ->placeholder('Select upload source (e.g., Google Drive, MediaFire)'),
+
+                        Forms\Components\Select::make('quality')
+                            ->options([
+                                '360' => '360p',
+                                '480' => '480p (SD)',
+                                '720' => '720p (HD)',
+                                '1080' => '1080p (Full HD)',
+                            ])
+                            ->label('Video Quality')
+                            ->placeholder('Select quality')
+                            ->default('720')
+                            ->required(),
 
                         Forms\Components\TextInput::make('duration')
                             ->numeric()
                             ->suffix('minutes'),
-                    ])->columns(3),
+                    ])->columns(4),
 
                 Forms\Components\Section::make('Publishing')
                     ->schema([
@@ -152,8 +162,8 @@ class EpisodeResource extends Resource
                     ->searchable()
                     ->limit(30),
 
-                Tables\Columns\TextColumn::make('videoUploadType.name')
-                    ->label('Upload Type')
+                Tables\Columns\TextColumn::make('videoUploadSource.name')
+                    ->label('Source')
                     ->badge()
                     ->color('warning')
                     ->sortable(),
@@ -161,6 +171,16 @@ class EpisodeResource extends Resource
                 Tables\Columns\TextColumn::make('duration')
                     ->suffix(' min')
                     ->sortable(),
+
+                Tables\Columns\BadgeColumn::make('quality')
+                    ->colors([
+                        'danger' => '360',
+                        'gray' => '480',
+                        'primary' => '720',
+                        'success' => '1080',
+                    ])
+                    ->formatStateUsing(fn ($state) => $state.'p')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('air_date')
                     ->date()
@@ -188,13 +208,21 @@ class EpisodeResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                // PERFORMANCE FIX: Remove preload() from filters
                 Tables\Filters\SelectFilter::make('anime')
                     ->relationship('anime', 'title')
                     ->searchable(),
 
-                Tables\Filters\SelectFilter::make('video_upload_type')
-                    ->relationship('videoUploadType', 'name')
+                Tables\Filters\SelectFilter::make('quality')
+                    ->options([
+                        '360' => '360p',
+                        '480' => '480p',
+                        '720' => '720p',
+                        '1080' => '1080p',
+                    ])
+                    ->placeholder('All Qualities'),
+
+                Tables\Filters\SelectFilter::make('video_upload_source')
+                    ->relationship('videoUploadSource', 'name')
                     ->searchable(),
 
                 Tables\Filters\TernaryFilter::make('is_published'),

@@ -4,22 +4,16 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
-use Filament\Forms;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\BadgeColumn;
-use Filament\Tables\Columns\TextInputColumn;
-use Filament\Tables\Columns\ToggleColumn;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Password;
-use Filament\Forms\Components\Select;
-use Spatie\Permission\Models\Role;
+use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Models\Role;
 
 class UserResource extends Resource
 {
@@ -28,7 +22,7 @@ class UserResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-user';
 
     protected static ?string $navigationGroup = 'Users Management';
-    
+
     protected static ?int $navigationSort = 1;
 
     public static function shouldRegisterNavigation(): bool
@@ -52,8 +46,9 @@ class UserResource extends Resource
     {
         // ADMIN users can edit non-ADMIN users only
         if (Auth::user()->hasRole('ADMIN')) {
-            return !$record->hasRole('ADMIN');
+            return ! $record->hasRole('ADMIN');
         }
+
         // Other users can edit any user
         return true;
     }
@@ -62,8 +57,9 @@ class UserResource extends Resource
     {
         // ADMIN users can delete non-ADMIN users only
         if (Auth::user()->hasRole('ADMIN')) {
-            return !$record->hasRole('ADMIN');
+            return ! $record->hasRole('ADMIN');
         }
+
         // Other users can delete any user
         return true;
     }
