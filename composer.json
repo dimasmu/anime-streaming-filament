@@ -68,7 +68,9 @@
             "@php artisan config:clear --ansi",
             "@php artisan cache:clear --ansi",
             "@php artisan route:clear --ansi",
-            "@php artisan view:clear --ansi"
+            "@php artisan view:clear --ansi",
+            "@php artisan filament:optimize",
+            "@php artisan filament:clear-cached-components"
         ]
     },
     "extra": {

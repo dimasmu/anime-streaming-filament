@@ -24,6 +24,7 @@ class Anime extends Model
         'cover_image',
         'banner',
         'trailer_url',
+        'video_upload_type_id',
         'status',
         'type',
         'episodes_count',
