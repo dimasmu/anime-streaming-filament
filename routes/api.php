@@ -86,7 +86,3 @@ Route::prefix('v1')->group(function () {
         });
     });
 });
-    Route::put('/{id}', [BookmarkController::class, 'update']);
-    Route::delete('/{id}', [BookmarkController::class, 'destroy']);
->>>>>>> 04c30ea4b83f7b65440e04670148e5821b8c3c53
-});
