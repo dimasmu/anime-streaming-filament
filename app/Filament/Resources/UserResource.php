@@ -4,13 +4,12 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
-use Filament\Actions\ViewAction;
 use Filament\Forms\Form;
 use Filament\Forms\Components\{Section, TextInput, Select};
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\{TextColumn, BadgeColumn, TextInputColumn, ToggleColumn};
-use Filament\Tables\Actions\{EditAction, DeleteAction, BulkActionGroup, DeleteBulkAction};
+use Filament\Tables\Actions\{ViewAction, EditAction, DeleteAction, CreateAction, BulkActionGroup, DeleteBulkAction};
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Spatie\Permission\Models\Role;

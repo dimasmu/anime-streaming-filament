@@ -13,13 +13,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'dimasmu',
-            'email' => 'dimasdemond@gmail.com',
-            'password' => 'dimas1213'
-        ]);
+        // Only create user if not exists
+        if (!User::where('email', 'dimasdemond@gmail.com')->exists()) {
+            User::factory()->create([
+                'name' => 'dimasmu',
+                'email' => 'dimasdemond@gmail.com',
+                'password' => 'dimas1213'
+            ]);
+        }
 
         $this->call([
             RolePermissionSeeder::class,
@@ -27,6 +28,8 @@ class DatabaseSeeder extends Seeder
             GenreSeeder::class,
             CategorySeeder::class,
             VideoUploadTypeSeeder::class,
+            AnimeSeeder::class,
+            CuratedOfflineAnimeSeeder::class,
         ]);
     }
 }

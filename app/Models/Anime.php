@@ -17,6 +17,8 @@ class Anime extends Model
     protected $fillable = [
         'title',
         'slug',
+        'season_number',
+        'seasons_total',
         'description',
         'synopsis',
         'poster_image',
@@ -29,6 +31,7 @@ class Anime extends Model
         'duration',
         'release_date',
         'rating',
+        'views',
         'studio_id',
         'source',
         'is_featured',

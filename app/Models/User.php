@@ -47,4 +47,18 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Determine if the user can access Filament admin panel.
+     */
+    public function canAccessPanel(\Filament\Panel $panel): bool
+    {
+        // CUSTOMER role cannot access the admin panel
+        if ($this->hasRole('CUSTOMER')) {
+            return false;
+        }
+
+        // All other users can access (super_admin, admin, etc.)
+        return true;
+    }
 }
