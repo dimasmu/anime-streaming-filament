@@ -4,12 +4,11 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\CategoryResource\Pages;
 use App\Models\Category;
+use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Forms\Components\{TextInput, Textarea};
 use Filament\Resources\Resource;
+use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Columns\{TextColumn, IconColumn};
-use Filament\Tables\Actions\{EditAction, DeleteAction, BulkActionGroup, DeleteBulkAction};
 use Illuminate\Support\Str;
 
 class CategoryResource extends Resource
@@ -29,20 +28,20 @@ class CategoryResource extends Resource
     {
         return $form
             ->schema([
-                TextInput::make('name')
+                Forms\Components\TextInput::make('name')
                     ->required()
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn (string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
-                
-                TextInput::make('slug')
+
+                Forms\Components\TextInput::make('slug')
                     ->required()
                     ->unique(ignoreRecord: true),
-                
-                TextInput::make('icon')
+
+                Forms\Components\TextInput::make('icon')
                     ->placeholder('heroicon-o-star')
                     ->helperText('Enter a Heroicon name for the category icon'),
-                
-                Textarea::make('description')
+
+                Forms\Components\Textarea::make('description')
                     ->rows(3)
                     ->columnSpanFull(),
             ]);
@@ -52,27 +51,21 @@ class CategoryResource extends Resource
     {
         return $table
             ->columns([
-                IconColumn::make('icon')
-                    ->icon(fn (string $state): string => $state ?: 'heroicon-o-folder')
-                    ->size('md'),
-                
-                TextColumn::make('name')
+                Tables\Columns\IconColumn::make('icon')
+                    ->icon(fn (string $state): string => $state ?: 'heroicon-o-folder'),
+
+                Tables\Columns\TextColumn::make('name')
                     ->searchable()
-                    ->sortable()
-                    ->weight('medium'),
-                
-                TextColumn::make('slug')
-                    ->searchable()
-                    ->color('gray')
-                    ->size('sm'),
-                
-                TextColumn::make('animes_count')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('slug')
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('animes_count')
                     ->counts('animes')
-                    ->label('Animes')
-                    ->badge()
-                    ->color('primary'),
-                
-                TextColumn::make('created_at')
+                    ->label('Animes Count'),
+
+                Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -81,16 +74,14 @@ class CategoryResource extends Resource
                 //
             ])
             ->actions([
-                EditAction::make(),
-                DeleteAction::make(),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ])
-            ->striped()
-            ->paginated([10, 25, 50]);
+            ]);
     }
 
     public static function getRelations(): array

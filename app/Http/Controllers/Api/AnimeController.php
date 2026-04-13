@@ -377,3 +377,4 @@ class AnimeController extends Controller
         ]);
     }
 }
+

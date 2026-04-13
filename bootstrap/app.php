@@ -19,7 +19,17 @@ return Application::configure(basePath: dirname(__DIR__))
         \App\Console\Commands\PublishEpisodes::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->api(prepend: [
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+        ]);
+
+        $middleware->redirectGuestsTo(function ($request) {
+            return route('login');
+        });
+
+        $middleware->redirectUsersTo(function ($request) {
+            return '/admin';
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

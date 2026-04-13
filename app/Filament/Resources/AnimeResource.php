@@ -4,14 +4,11 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\AnimeResource\Pages;
 use App\Models\Anime;
-use App\Models\VideoUploadType;
+use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Forms\Components\{ColorPicker, Section, TextInput, Select, Textarea, RichEditor, FileUpload, DatePicker, Toggle};
 use Filament\Resources\Resource;
+use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Columns\{TextColumn, ImageColumn, BadgeColumn, ToggleColumn};
-use Filament\Tables\Filters\{SelectFilter, TernaryFilter};
-use Filament\Tables\Actions\{EditAction, DeleteAction, BulkActionGroup, DeleteBulkAction};
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
@@ -30,8 +27,8 @@ class AnimeResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['studio', 'genres', 'categories', 'videoUploadType']) // Eager load relationships
-            ->withCount('episodes as actual_episodes_count'); // Add actual episode count with different name
+            ->with(['studio', 'genres', 'categories']) // Eager load relationships
+            ->withCount('episodes'); // Add episode count efficiently
     }
 
     public static function canViewAny(): bool
@@ -58,9 +55,9 @@ class AnimeResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Basic Information')
+                Forms\Components\Section::make('Basic Information')
                     ->schema([
-                        TextInput::make('title')
+                        Forms\Components\TextInput::make('title')
                             ->required()
                             ->live(onBlur: true)
                             ->afterStateUpdated(function (string $context, $state, callable $set, callable $get) {
@@ -69,14 +66,18 @@ class AnimeResource extends Resource
                                 }
                             }),
 
-                        TextInput::make('slug')
+                        Forms\Components\TextInput::make('japanese_title')
+                            ->label('Japanese Title')
+                            ->helperText('Original Japanese title'),
+
+                        Forms\Components\TextInput::make('slug')
                             ->required()
                             ->disabled()
                             ->dehydrated()
                             ->unique(ignoreRecord: true)
                             ->helperText('Auto-generated from title'),
 
-                        Select::make('status')
+                        Forms\Components\Select::make('status')
                             ->options([
                                 'upcoming' => 'Upcoming',
                                 'ongoing' => 'Ongoing',
@@ -85,7 +86,7 @@ class AnimeResource extends Resource
                             ])
                             ->required(),
 
-                        Select::make('type')
+                        Forms\Components\Select::make('type')
                             ->options([
                                 'tv' => 'TV Series',
                                 'movie' => 'Movie',
@@ -94,170 +95,167 @@ class AnimeResource extends Resource
                                 'special' => 'Special',
                             ])
                             ->required(),
-                    ])->columns(2),
+                    ])->columns(3),
 
-                Section::make('Content')
+                Forms\Components\Section::make('Content')
                     ->schema([
-                        Textarea::make('description')
+                        Forms\Components\Textarea::make('description')
                             ->rows(3),
 
-                        RichEditor::make('synopsis')
+                        Forms\Components\RichEditor::make('synopsis')
                             ->columnSpanFull(),
                     ]),
 
-                Section::make('Media')
+                Forms\Components\Section::make('Media')
                     ->schema([
-                        FileUpload::make('poster_image')
+                        Forms\Components\FileUpload::make('poster_image')
                             ->image()
                             ->disk('public')
                             ->directory('anime/posters')
-                            ->visibility('public')
-                            ->imageEditor()
-                            ->imageEditorAspectRatios([
-                                '2:3',
-                                '3:4',
-                                '1:1',
-                            ])
-                            ->maxSize(5120) // 5MB
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                            ->helperText('Upload a poster image (max 5MB). Recommended size: 600x900px'),
+                            ->visibility('public'),
 
-                        FileUpload::make('cover_image')
+                        Forms\Components\FileUpload::make('cover_image')
                             ->image()
                             ->disk('public')
                             ->directory('anime/covers')
+                            ->visibility('public'),
+
+                        Forms\Components\FileUpload::make('banner')
+                            ->image()
+                            ->disk('public')
+                            ->directory('anime/banners')
                             ->visibility('public')
-                            ->imageEditor()
-                            ->imageEditorAspectRatios([
-                                '16:9',
-                                '4:3',
-                                '1:1',
-                            ])
-                            ->maxSize(5120) // 5MB
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                            ->helperText('Upload a cover image (max 5MB). Recommended size: 1920x1080px'),
+                            ->helperText('Banner image for homepage featured sections'),
 
-                        TextInput::make('trailer_url')
+                        Forms\Components\TextInput::make('trailer_url')
                             ->url(),
+                    ])->columns(4),
 
-                        Select::make('video_upload_type_id')
-                            ->label('Video Upload Type')
-                            ->relationship('videoUploadType', 'name')
-                            ->options(VideoUploadType::active()->pluck('name', 'id'))
-                            ->searchable()
-                            ->preload()
-                            ->nullable()
-                            ->createOptionForm(auth()->user()->can('create_video_upload_type') ? [
-                                TextInput::make('name')
-                                    ->required()
-                                    ->maxLength(255)
-                                    ->placeholder('e.g., YouTube, Vimeo, Direct Upload'),
-                                Textarea::make('description')
-                                    ->placeholder('Optional description of this upload type')
-                                    ->rows(3),
-                                Toggle::make('is_active')
-                                    ->label('Active')
-                                    ->default(true)
-                                    ->helperText('Only active upload types will be available for selection'),
-                            ] : null)
-                            ->helperText(auth()->user()->can('create_video_upload_type') ? null : 'Contact admin to add new video upload types'),
-                    ])->columns(3),
-
-                Section::make('Details')
+                Forms\Components\Section::make('Details')
                     ->schema([
-                        TextInput::make('episodes_count')
-                            ->label('Total Episodes (Planned)')
+                        Forms\Components\TextInput::make('episodes_count')
                             ->numeric()
                             ->minValue(1)
-                            ->helperText('Total number of episodes planned for this anime'),
+                            ->label('Total Episodes'),
 
-                        TextInput::make('duration')
+                        Forms\Components\TextInput::make('sub_episodes')
                             ->numeric()
-                            ->suffix('minutes'),
+                            ->minValue(0)
+                            ->label('Sub Episodes')
+                            ->helperText('Number of subbed episodes available'),
 
-                        DatePicker::make('release_date'),
+                        Forms\Components\TextInput::make('dub_episodes')
+                            ->numeric()
+                            ->minValue(0)
+                            ->label('Dub Episodes')
+                            ->helperText('Number of dubbed episodes available'),
 
-                        TextInput::make('rating')
+                        Forms\Components\TextInput::make('duration')
+                            ->numeric()
+                            ->suffix('minutes')
+                            ->label('Episode Duration'),
+
+                        Forms\Components\DatePicker::make('release_date')
+                            ->label('Release Date'),
+
+                        Forms\Components\TextInput::make('release_year')
+                            ->numeric()
+                            ->minValue(1900)
+                            ->maxValue(date('Y') + 5)
+                            ->label('Release Year'),
+
+                        Forms\Components\TextInput::make('rating')
                             ->numeric()
                             ->minValue(0)
                             ->maxValue(10)
                             ->step(0.1),
 
+                        Forms\Components\Select::make('quality')
+                            ->options([
+                                'HD' => 'HD (720p)',
+                                'SD' => 'SD (480p)',
+                                '4K' => '4K (2160p)',
+                            ])
+                            ->label('Video Quality')
+                            ->placeholder('Select quality'),
+
                         // PERMISSION FIX: Only ADMIN can create new studios
-                        Select::make('studio_id')
+                        Forms\Components\Select::make('studio_id')
                             ->relationship('studio', 'name')
                             ->searchable()
                             ->createOptionForm(auth()->user()->can('create_studio') ? [
-                                TextInput::make('name')
+                                Forms\Components\TextInput::make('name')
                                     ->required()
                                     ->live(onBlur: true)
-                                    ->afterStateUpdated(fn(string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
-                                TextInput::make('slug')
+                                    ->afterStateUpdated(fn (string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
+                                Forms\Components\TextInput::make('slug')
                                     ->required(),
-                                TextInput::make('website')
+                                Forms\Components\TextInput::make('website')
                                     ->url(),
-                                TextInput::make('founded_year')
+                                Forms\Components\TextInput::make('founded_year')
                                     ->numeric(),
-                                Toggle::make('is_active')
+                                Forms\Components\Toggle::make('is_active')
                                     ->default(true),
                             ] : null)
                             ->label('Studio')
-                            ->preload()
                             ->helperText(auth()->user()->hasRole('EDITOR') ? 'Contact admin to add new studios' : null),
 
-                        TextInput::make('source')
+                        Forms\Components\TextInput::make('source')
                             ->placeholder('e.g., Manga, Light Novel, Original'),
-                    ])->columns(3),
+                    ])->columns(4),
 
-                Section::make('Categories & Genres')
+                Forms\Components\Section::make('Categories & Genres')
                     ->schema([
                         // PERMISSION FIX: Only ADMIN can create new genres
-                        Select::make('genres')
+                        Forms\Components\Select::make('genres')
                             ->relationship('genres', 'name')
                             ->multiple()
                             ->searchable()
-                            ->preload()
                             ->createOptionForm(auth()->user()->can('create_genre') ? [
-                                TextInput::make('name')
+                                Forms\Components\TextInput::make('name')
                                     ->required()
                                     ->live(onBlur: true)
-                                    ->afterStateUpdated(fn(string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
-                                TextInput::make('slug')
+                                    ->afterStateUpdated(fn (string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
+                                Forms\Components\TextInput::make('slug')
                                     ->required(),
-                                ColorPicker::make('color'),
+                                Forms\Components\ColorPicker::make('color'),
                             ] : null)
                             ->helperText(auth()->user()->hasRole('EDITOR') ? 'Contact admin to add new genres' : null),
 
                         // PERMISSION FIX: Only ADMIN can create new categories
-                        Select::make('categories')
+                        Forms\Components\Select::make('categories')
                             ->relationship('categories', 'name')
                             ->multiple()
                             ->searchable()
-                            ->preload()
                             ->createOptionForm(auth()->user()->can('create_category') ? [
-                                TextInput::make('name')
+                                Forms\Components\TextInput::make('name')
                                     ->required()
                                     ->live(onBlur: true)
-                                    ->afterStateUpdated(fn(string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
-                                TextInput::make('slug')
+                                    ->afterStateUpdated(fn (string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
+                                Forms\Components\TextInput::make('slug')
                                     ->required(),
-                                TextInput::make('icon')
+                                Forms\Components\TextInput::make('icon')
                                     ->placeholder('heroicon name'),
                             ] : null)
                             ->helperText(auth()->user()->hasRole('EDITOR') ? 'Contact admin to add new categories' : null),
                     ])->columns(2),
 
-                Section::make('Publishing')
+                Forms\Components\Section::make('Publishing')
                     ->schema([
-                        Toggle::make('is_featured')
+                        Forms\Components\Toggle::make('is_featured')
                             ->label('Featured Anime')
-                            ->visible(fn() => auth()->user()->can('publish_anime')),
+                            ->visible(fn () => auth()->user()->can('publish_anime')),
 
-                        Toggle::make('is_published')
+                        Forms\Components\Toggle::make('is_adult')
+                            ->label('Adult Content')
+                            ->helperText('Mark as 18+ content')
+                            ->visible(fn () => auth()->user()->can('publish_anime')),
+
+                        Forms\Components\Toggle::make('is_published')
                             ->label('Published')
-                            ->visible(fn() => auth()->user()->can('publish_anime'))
-                            ->helperText(fn() => auth()->user()->hasRole('EDITOR') ? 'Only admins can publish content' : null),
-                    ])->columns(2),
+                            ->visible(fn () => auth()->user()->can('publish_anime'))
+                            ->helperText(fn () => auth()->user()->hasRole('EDITOR') ? 'Only admins can publish content' : null),
+                    ])->columns(3),
             ]);
     }
 
@@ -269,38 +267,24 @@ class AnimeResource extends Resource
 
         return $table
             ->columns([
-                ImageColumn::make('poster_image')
+                Tables\Columns\ImageColumn::make('poster_image')
                     ->disk('public')
-                    ->size(50)
-                    ->square()
-                    ->defaultImageUrl(function () {
-                        return asset('images/no-images.png');
-                    })
-                    ->extraImgAttributes(['alt' => 'Poster'])
-                    ->checkFileExistence(false),
+                    ->size(60),
 
-                ImageColumn::make('cover_image')
-                    ->disk('public')
-                    ->size(50)
-                    ->square()
-                    ->label('Cover')
-                    ->defaultImageUrl(function () {
-                        return asset('images/no-images.png');
-                    })
-                    ->extraImgAttributes(['alt' => 'Cover'])
-                    ->checkFileExistence(false),
-
-                TextColumn::make('title')
+                Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->sortable()
-                    ->formatStateUsing(fn (string $state): string => $state)
-                    ->extraAttributes([
-                        'style' => 'min-width: 350px !important; width: 350px !important; white-space: normal !important; word-wrap: break-word !important;',
-                        'class' => 'title-column'
-                    ])
-                    ->weight('medium'),
+                    ->limit(30)
+                    ->description(fn (Anime $record): string => $record->japanese_title ?? '')
+                    ->wrap(),
 
-                BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('japanese_title')
+                    ->label('Japanese Title')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->limit(20),
+
+                Tables\Columns\BadgeColumn::make('status')
                     ->colors([
                         'warning' => 'upcoming',
                         'success' => 'ongoing',
@@ -308,60 +292,69 @@ class AnimeResource extends Resource
                         'danger' => 'hiatus',
                     ]),
 
-                TextColumn::make('type')
-                    ->badge()
-                    ->size('sm'),
+                Tables\Columns\TextColumn::make('type')
+                    ->badge(),
 
-                TextColumn::make('episodes_count')
-                    ->label('Planned')
+                Tables\Columns\TextColumn::make('episodes_count')
+                    ->label('Total')
                     ->sortable()
-                    ->badge()
-                    ->color('primary')
-                    ->size('sm'),
+                    ->toggleable(),
 
-                TextColumn::make('actual_episodes_count')
-                    ->label('Uploaded')
+                Tables\Columns\TextColumn::make('sub_episodes')
+                    ->label('Sub')
                     ->sortable()
-                    ->badge()
-                    ->size('sm')
-                    ->color(fn($record) => $record->actual_episodes_count >= $record->episodes_count ? 'success' : 'warning'),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('studio.name')
+                Tables\Columns\TextColumn::make('dub_episodes')
+                    ->label('Dub')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\BadgeColumn::make('quality')
+                    ->colors([
+                        'success' => '4K',
+                        'primary' => 'HD',
+                        'gray' => 'SD',
+                    ])
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('release_year')
+                    ->label('Year')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('studio.name')
                     ->label('Studio')
-                    ->sortable()
-                    ->limit(15)
-                    ->tooltip(function (TextColumn $column): ?string {
-                        $state = $column->getState();
-                        return strlen($state) > 15 ? $state : null;
-                    }),
+                    ->sortable(),
 
-                TextColumn::make('videoUploadType.name')
-                    ->label('Upload Type')
-                    ->badge()
-                    ->color('info')
-                    ->size('sm')
-                    ->placeholder('Not set'),
+                Tables\Columns\TextColumn::make('rating')
+                    ->sortable(),
 
-                TextColumn::make('rating')
-                    ->sortable()
-                    ->badge()
-                    ->color('warning'),
+                Tables\Columns\IconColumn::make('is_adult')
+                    ->label('18+')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-exclamation-triangle')
+                    ->falseIcon('heroicon-o-check-circle')
+                    ->trueColor('danger')
+                    ->falseColor('gray')
+                    ->toggleable(),
 
-                ToggleColumn::make('is_featured')
+                // PERFORMANCE FIX: Cache permission check
+                Tables\Columns\ToggleColumn::make('is_featured')
                     ->label('Featured')
                     ->visible($canPublish),
 
-                ToggleColumn::make('is_published')
+                Tables\Columns\ToggleColumn::make('is_published')
                     ->label('Published')
                     ->visible($canPublish),
 
-                TextColumn::make('created_at')
+                Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('status')
+                Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'upcoming' => 'Upcoming',
                         'ongoing' => 'Ongoing',
@@ -369,7 +362,7 @@ class AnimeResource extends Resource
                         'hiatus' => 'Hiatus',
                     ]),
 
-                SelectFilter::make('type')
+                Tables\Filters\SelectFilter::make('type')
                     ->options([
                         'tv' => 'TV Series',
                         'movie' => 'Movie',
@@ -378,33 +371,41 @@ class AnimeResource extends Resource
                         'special' => 'Special',
                     ]),
 
-                SelectFilter::make('studio')
+                Tables\Filters\SelectFilter::make('quality')
+                    ->options([
+                        'HD' => 'HD',
+                        'SD' => 'SD',
+                        '4K' => '4K',
+                    ])
+                    ->placeholder('All Qualities'),
+
+                Tables\Filters\SelectFilter::make('studio')
                     ->relationship('studio', 'name')
                     ->searchable(),
 
-                SelectFilter::make('video_upload_type')
-                    ->relationship('videoUploadType', 'name')
-                    ->searchable()
-                    ->label('Upload Type'),
+                Tables\Filters\TernaryFilter::make('is_featured')
+                    ->label('Featured'),
 
-                TernaryFilter::make('is_featured'),
-                TernaryFilter::make('is_published'),
+                Tables\Filters\TernaryFilter::make('is_adult')
+                    ->label('Adult Content')
+                    ->placeholder('All content')
+                    ->trueLabel('Adult only')
+                    ->falseLabel('Non-adult only'),
+
+                Tables\Filters\TernaryFilter::make('is_published')
+                    ->label('Published'),
             ])
             ->actions([
-                EditAction::make(),
-                DeleteAction::make()
-                    ->visible($canDelete),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->visible($canDelete), // Use cached permission
             ])
             ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->visible($canDelete),
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->visible($canDelete), // Use cached permission
                 ]),
-            ])
-            ->striped()
-            ->paginated([10, 25, 50, 100])
-            ->defaultSort('created_at', 'desc')
-            ->extremePaginationLinks();
+            ]);
     }
 
     public static function getRelations(): array

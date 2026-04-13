@@ -16,6 +16,7 @@ class Anime extends Model
 
     protected $fillable = [
         'title',
+        'japanese_title',
         'slug',
         'season_number',
         'seasons_total',
@@ -23,24 +24,30 @@ class Anime extends Model
         'synopsis',
         'poster_image',
         'cover_image',
+        'banner',
         'trailer_url',
         'video_upload_type_id',
         'status',
         'type',
         'episodes_count',
+        'sub_episodes',
+        'dub_episodes',
         'duration',
         'release_date',
+        'release_year',
         'rating',
         'views',
         'studio_id',
         'source',
         'is_featured',
+        'is_adult',
         'is_published',
     ];
 
     protected $casts = [
         'release_date' => 'date',
         'is_featured' => 'boolean',
+        'is_adult' => 'boolean',
         'is_published' => 'boolean',
         'rating' => 'decimal:1',
     ];
@@ -65,40 +72,38 @@ class Anime extends Model
         return $this->belongsTo(Studio::class);
     }
 
-    public function videoUploadType(): BelongsTo
+    public function watchHistory(): HasMany
     {
-        return $this->belongsTo(VideoUploadType::class);
+        return $this->hasMany(WatchHistory::class);
     }
 
-    /**
-     * Get the actual count of uploaded episodes
-     */
-    public function getActualEpisodesCountAttribute()
+    public function favoritedBy(): BelongsToMany
     {
-        return $this->episodes()->count();
+        return $this->belongsToMany(User::class, 'user_favorites');
     }
 
-    /**
-     * Check if all planned episodes are uploaded
-     */
-    public function getIsCompleteAttribute()
+    public function scopePublished($query)
     {
-        return $this->episodes_count && $this->actual_episodes_count >= $this->episodes_count;
+        return $query->where('is_published', true);
     }
 
-    /**
-     * Get the full URL for poster image
-     */
-    public function getPosterImageUrlAttribute()
+    public function scopeAdult($query, $includeAdult = false)
     {
-        return $this->poster_image ? asset('storage/' . $this->poster_image) : null;
+        return $includeAdult ? $query : $query->where('is_adult', false);
     }
 
-    /**
-     * Get the full URL for cover image
-     */
-    public function getCoverImageUrlAttribute()
+    public function scopeByQuality($query, $quality)
     {
-        return $this->cover_image ? asset('storage/' . $this->cover_image) : null;
+        return $query->where('quality', $quality);
+    }
+
+    public function scopeHasSub($query)
+    {
+        return $query->where('sub_episodes', '>', 0);
+    }
+
+    public function scopeHasDub($query)
+    {
+        return $query->where('dub_episodes', '>', 0);
     }
 }

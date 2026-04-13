@@ -93,3 +93,16 @@ class Comment extends Model
         return $this->likedBy()->where('user_id', $user->id)->exists();
     }
 }
+    }
+
+    public function scopeForEpisode($query, $episodeId)
+    {
+        return $query->where('episode_id', $episodeId);
+    }
+
+    public function scopeWithoutSpoilers($query)
+    {
+        return $query->where('is_spoiler', false);
+>>>>>>> 04c30ea4b83f7b65440e04670148e5821b8c3c53
+    }
+}

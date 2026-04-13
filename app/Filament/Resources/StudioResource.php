@@ -4,13 +4,11 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\StudioResource\Pages;
 use App\Models\Studio;
+use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Forms\Components\{Section, TextInput, Textarea, FileUpload, Toggle};
 use Filament\Resources\Resource;
+use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Columns\{TextColumn, ImageColumn, IconColumn};
-use Filament\Tables\Filters\TernaryFilter;
-use Filament\Tables\Actions\{EditAction, DeleteAction, BulkActionGroup, DeleteBulkAction};
 use Illuminate\Support\Str;
 
 class StudioResource extends Resource
@@ -30,45 +28,45 @@ class StudioResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Studio Information')
+                Forms\Components\Section::make('Studio Information')
                     ->schema([
-                        TextInput::make('name')
+                        Forms\Components\TextInput::make('name')
                             ->required()
                             ->live(onBlur: true)
                             ->afterStateUpdated(fn (string $context, $state, callable $set) => $context === 'create' ? $set('slug', Str::slug($state)) : null),
-                        
-                        TextInput::make('slug')
+
+                        Forms\Components\TextInput::make('slug')
                             ->required()
                             ->unique(ignoreRecord: true),
-                        
-                        TextInput::make('website')
+
+                        Forms\Components\TextInput::make('website')
                             ->url()
                             ->placeholder('https://studio-website.com'),
-                        
-                        TextInput::make('founded_year')
+
+                        Forms\Components\TextInput::make('founded_year')
                             ->numeric()
                             ->minValue(1900)
                             ->maxValue(date('Y'))
                             ->placeholder('e.g., 1998'),
                     ])->columns(2),
 
-                Section::make('Description')
+                Forms\Components\Section::make('Description')
                     ->schema([
-                        Textarea::make('description')
+                        Forms\Components\Textarea::make('description')
                             ->rows(4)
                             ->columnSpanFull(),
                     ]),
 
-                Section::make('Media')
+                Forms\Components\Section::make('Media')
                     ->schema([
-                        FileUpload::make('logo')
+                        Forms\Components\FileUpload::make('logo')
                             ->image()
                             ->directory('studios/logos'),
                     ]),
 
-                Section::make('Status')
+                Forms\Components\Section::make('Status')
                     ->schema([
-                        Toggle::make('is_active')
+                        Forms\Components\Toggle::make('is_active')
                             ->label('Active Studio')
                             ->default(true),
                     ]),
@@ -79,57 +77,48 @@ class StudioResource extends Resource
     {
         return $table
             ->columns([
-                ImageColumn::make('logo')
-                    ->size(50)
-                    ->square(),
-                
-                TextColumn::make('name')
+                Tables\Columns\ImageColumn::make('logo')
+                    ->size(50),
+
+                Tables\Columns\TextColumn::make('name')
                     ->searchable()
-                    ->sortable()
-                    ->weight('medium'),
-                
-                TextColumn::make('founded_year')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('founded_year')
                     ->label('Founded')
-                    ->sortable()
-                    ->badge()
-                    ->color('gray'),
-                
-                TextColumn::make('website')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('website')
                     ->url(fn ($record) => $record->website)
                     ->openUrlInNewTab()
-                    ->limit(25)
-                    ->color('blue'),
-                
-                TextColumn::make('animes_count')
+                    ->limit(30),
+
+                Tables\Columns\TextColumn::make('animes_count')
                     ->counts('animes')
-                    ->label('Animes')
-                    ->badge()
-                    ->color('primary'),
-                
-                IconColumn::make('is_active')
+                    ->label('Animes Count'),
+
+                Tables\Columns\IconColumn::make('is_active')
                     ->boolean()
                     ->label('Active'),
-                
-                TextColumn::make('created_at')
+
+                Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                TernaryFilter::make('is_active')
+                Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active Studios'),
             ])
             ->actions([
-                EditAction::make(),
-                DeleteAction::make(),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ])
-            ->striped()
-            ->paginated([10, 25, 50]);
+            ]);
     }
 
     public static function getRelations(): array

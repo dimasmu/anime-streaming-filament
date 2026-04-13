@@ -98,11 +98,10 @@ return [
 
     'system_route_prefix' => 'filament',
 
-
     'dark_mode' => true,
     'layout' => [
         'sidebar' => [
-            'is_collapsible_on_desktop' => true
+            'is_collapsible_on_desktop' => true,
         ],
     ],
 
